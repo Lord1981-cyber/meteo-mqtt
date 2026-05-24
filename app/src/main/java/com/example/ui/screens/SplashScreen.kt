@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.*
@@ -266,8 +267,8 @@ fun MeteoSplashScreen(onFinished: () -> Unit) {
             Button(
                 onClick = { onFinished() },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF3B82F6),
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
@@ -286,7 +287,7 @@ fun MeteoSplashScreen(onFinished: () -> Unit) {
                 Icon(
                     imageVector = Icons.Default.Speed,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(16.dp)
                 )
             }

@@ -61,6 +61,13 @@ fun DashboardScreen(
     val lastErrorMessage by viewModel.lastErrorMessage.collectAsStateWithLifecycle()
     val msgCount by viewModel.msgCount.collectAsStateWithLifecycle()
 
+    val isDarkTheme = MaterialTheme.colorScheme.background == Color.Black
+    val bgApp = if (isDarkTheme) Color.Black else Color(0xFFF7F9FC)
+    val barBg = if (isDarkTheme) Color.Black else Color.White
+    val borderCol = if (isDarkTheme) Color(0xFF222222) else Color(0xFFF1F5F9)
+    val titleTextCol = if (isDarkTheme) Color.White else Color(0xFF0F172A)
+    val subtextCol = if (isDarkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -77,7 +84,7 @@ fun DashboardScreen(
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     letterSpacing = (-0.5).sp
                                 ),
-                                color = Color(0xFF0F172A)
+                                color = titleTextCol
                             )
                             Text(
                                 text = "NODEMCU ESP8266",
@@ -86,7 +93,7 @@ fun DashboardScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 1.5.sp
                                 ),
-                                color = Color(0xFF64748B)
+                                color = subtextCol
                             )
                         }
 
@@ -94,8 +101,8 @@ fun DashboardScreen(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(100.dp))
-                                .background(Color(0xFFECFDF5))
-                                .border(1.dp, Color(0xFFD1FAE5), RoundedCornerShape(100.dp))
+                                .background(if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFECFDF5))
+                                .border(1.dp, if (isDarkTheme) Color(0xFF334155) else Color(0xFFD1FAE5), RoundedCornerShape(100.dp))
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -117,10 +124,11 @@ fun DashboardScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp
                                 ),
-                                color = if (connectionState == MqttConnectionState.CONNECTED) 
-                                    Color(0xFF047857) 
-                                else 
-                                    Color(0xFF475569)
+                                color = if (connectionState == MqttConnectionState.CONNECTED) {
+                                    if (isDarkTheme) Color(0xFF34D399) else Color(0xFF047857)
+                                } else {
+                                    subtextCol
+                                }
                             )
                         }
                     }
@@ -133,24 +141,24 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.AddChart,
                             contentDescription = "Simuler donnée",
-                            tint = Color(0xFF475569)
+                            tint = if (isDarkTheme) Color(0xFFFFEB3B) else Color(0xFF475569)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color(0xFF0F172A)
+                    containerColor = barBg,
+                    titleContentColor = titleTextCol
                 ),
-                modifier = Modifier.border(0.dp, Color(0xFFF1F5F9))
+                modifier = Modifier.border(0.dp, borderCol)
             )
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color.White,
+                containerColor = barBg,
                 tonalElevation = 0.dp,
                 modifier = Modifier
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .border(1.dp, Color(0xFFF1F5F9))
+                    .border(1.dp, borderCol)
             ) {
                 tabs.forEachIndexed { index, title ->
                     val icon = when (index) {
@@ -175,7 +183,7 @@ fun DashboardScreen(
                 }
             }
         },
-        containerColor = Color(0xFFF7F9FC), // Soft slate bg from Professional Polish HTML
+        containerColor = bgApp, // Adaptive background
         contentWindowInsets = WindowInsets.safeDrawing,
         modifier = modifier
     ) { innerPadding ->
@@ -917,13 +925,19 @@ fun SensorCard(
     subtitle: String,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.background == Color.Black
+    val cardBg = if (isDark) Color(0xFF111111) else Color.White
+    val cardBorder = if (isDark) Color(0xFF222222) else Color(0xFFF1F5F9)
+    val titleCol = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val valueCol = if (isDark) Color.White else Color(0xFF0F172A)
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = cardBg
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -956,7 +970,7 @@ fun SensorCard(
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     ),
-                    color = Color(0xFF64748B) // Soft Slate text
+                    color = titleCol
                 )
                 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -974,14 +988,14 @@ fun SensorCard(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = (-0.5).sp
                             ),
-                            color = Color(0xFF0F172A)
+                            color = valueCol
                         )
                         Text(
                             text = parts.subList(1, parts.size).joinToString(" "),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Normal
                             ),
-                            color = Color(0xFF94A3B8),
+                            color = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
                             modifier = Modifier.padding(bottom = 3.dp)
                         )
                     }
@@ -992,7 +1006,7 @@ fun SensorCard(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp
                         ),
-                        color = Color(0xFF0F172A)
+                        color = valueCol
                     )
                 }
 
@@ -1283,6 +1297,15 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     var passwordVisible by remember { mutableStateOf(false) }
 
+    val isDark = MaterialTheme.colorScheme.background == Color.Black
+    val cardBg = if (isDark) Color(0xFF121212) else Color.White
+    val cardBorder = if (isDark) Color(0xFF222222) else Color(0xFFF1F5F9)
+    val titleCol = if (isDark) Color(0xFFFFEB3B) else Color(0xFF1E3A8A)
+    val textCol = if (isDark) Color.White else Color(0xFF475569)
+    val labelColor = if (isDark) Color.White else Color(0xFF1E293B)
+    val descColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val dividerCol = if (isDark) Color(0xFF222222) else Color(0xFFF1F5F9)
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -1293,9 +1316,9 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
             Card(
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = cardBg
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
@@ -1304,7 +1327,7 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color(0xFF1E3A8A)
+                        color = titleCol
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -1312,7 +1335,7 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                         style = MaterialTheme.typography.bodyMedium.copy(
                             lineHeight = 20.sp
                         ),
-                        color = Color(0xFF475569)
+                        color = textCol
                     )
                 }
             }
@@ -1439,7 +1462,10 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                     Button(
                         onClick = { viewModel.connectMqtt() },
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         modifier = Modifier
                             .weight(1f)
                             .height(52.dp)
@@ -1479,9 +1505,9 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
             Card(
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = cardBg
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1493,7 +1519,7 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color(0xFF0F172A)
+                        color = if (isDark) Color(0xFFFFEB3B) else Color(0xFF0F172A)
                     )
 
                     // Background Notifications Option
@@ -1514,13 +1540,13 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFEFF6FF)),
+                                    .background(if (isDark) Color(0xFF1E293B) else Color(0xFFEFF6FF)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.NotificationsActive,
                                     contentDescription = null,
-                                    tint = Color(0xFF3B82F6),
+                                    tint = if (isDark) Color(0xFFFFEB3B) else Color(0xFF3B82F6),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -1530,12 +1556,12 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ),
-                                    color = Color(0xFF1E293B)
+                                    color = labelColor
                                 )
                                 Text(
                                     text = "Alerter lors de nouvelles réceptions de mesures",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF64748B)
+                                    color = descColor
                                 )
                             }
                         }
@@ -1543,14 +1569,14 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                             checked = bgNotifEnabled,
                             onCheckedChange = { viewModel.setBackgroundNotifications(it) },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = Color(0xFF3B82F6),
-                                uncheckedColor = Color(0xFFCBD5E1)
+                                checkedColor = if (isDark) Color(0xFFFFEB3B) else Color(0xFF3B82F6),
+                                uncheckedColor = if (isDark) Color(0xFF475569) else Color(0xFFCBD5E1)
                             ),
                             modifier = Modifier.testTag("bg_notifications_checkbox")
                         )
                     }
 
-                    HorizontalDivider(color = Color(0xFFF1F5F9))
+                    HorizontalDivider(color = dividerCol)
 
                     // Bulletin Email Options
                     Row(
@@ -1570,13 +1596,13 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFECFDF5)),
+                                    .background(if (isDark) Color(0xFF1E293B) else Color(0xFFECFDF5)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Email,
                                     contentDescription = null,
-                                    tint = Color(0xFF10B981),
+                                    tint = if (isDark) Color(0xFFFFEB3B) else Color(0xFF10B981),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -1586,12 +1612,12 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ),
-                                    color = Color(0xFF1E293B)
+                                    color = labelColor
                                 )
                                 Text(
                                     text = "Envoyer un rapport périodique structuré",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF64748B)
+                                    color = descColor
                                 )
                             }
                         }
@@ -1599,10 +1625,10 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                             checked = bulletinEnabled,
                             onCheckedChange = { viewModel.setBulletinEmailEnabled(it) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF10B981),
-                                uncheckedThumbColor = Color(0xFF94A3B8),
-                                uncheckedTrackColor = Color(0xFFE2E8F0)
+                                checkedThumbColor = if (isDark) Color.Black else Color.White,
+                                checkedTrackColor = if (isDark) Color(0xFFFFEB3B) else Color(0xFF10B981),
+                                uncheckedThumbColor = if (isDark) Color(0xFF475569) else Color(0xFF94A3B8),
+                                uncheckedTrackColor = if (isDark) Color(0xFF222222) else Color(0xFFE2E8F0)
                             ),
                             modifier = Modifier.testTag("email_bulletin_switch")
                         )
@@ -1618,8 +1644,8 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFFF8FAFC), RoundedCornerShape(16.dp))
-                                .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(16.dp))
+                                .background(if (isDark) Color(0xFF0F0F0F) else Color(0xFFF8FAFC), RoundedCornerShape(16.dp))
+                                .border(1.dp, if (isDark) Color(0xFF222222) else Color(0xFFF1F5F9), RoundedCornerShape(16.dp))
                                 .padding(14.dp)
                         ) {
                             OutlinedTextField(
@@ -1700,9 +1726,9 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
             Card(
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = cardBg
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1714,7 +1740,7 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color(0xFF0F172A)
+                        color = if (isDark) Color(0xFFFFEB3B) else Color(0xFF0F172A)
                     )
 
                     Row(
@@ -1729,9 +1755,21 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
 
                         options.forEach { (label, icon, value) ->
                             val isSelected = themeMode == value
-                            val borderCol = if (isSelected) Color(0xFF3B82F6) else Color(0xFFF1F5F9)
-                            val bgCol = if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC)
-                            val contentCol = if (isSelected) Color(0xFF2563EB) else Color(0xFF475569)
+                            val borderCol = if (isSelected) {
+                                if (isDark) Color(0xFFFFEB3B) else Color(0xFF3B82F6)
+                            } else {
+                                if (isDark) Color(0xFF222222) else Color(0xFFF1F5F9)
+                            }
+                            val bgCol = if (isSelected) {
+                                if (isDark) Color(0xFF222222) else Color(0xFFEFF6FF)
+                            } else {
+                                if (isDark) Color(0xFF111111) else Color(0xFFF8FAFC)
+                            }
+                            val contentCol = if (isSelected) {
+                                if (isDark) Color(0xFFFFEB3B) else Color(0xFF2563EB)
+                            } else {
+                                if (isDark) Color(0xFF94A3B8) else Color(0xFF475569)
+                            }
 
                             Column(
                                 modifier = Modifier
@@ -1765,7 +1803,7 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
         }
 
         item {
-            HorizontalDivider(color = Color(0xFFF1F5F9))
+            HorizontalDivider(color = dividerCol)
         }
 
         item {
@@ -1778,19 +1816,19 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold
                     ),
-                    color = Color(0xFF0F172A)
+                    color = if (isDark) Color(0xFFFFEB3B) else Color(0xFF0F172A)
                 )
                 Text(
                     text = "Utile pour s'assurer du bon fonctionnement de la liaison et de la base de données interne sans BME280 réel connecté.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF64748B)
+                    color = descColor
                 )
                 Button(
                     onClick = { viewModel.triggerMockReading() },
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFF1F5F9),
-                        contentColor = Color(0xFF1E293B)
+                        containerColor = if (isDark) Color(0xFFFFEB3B) else Color(0xFFF1F5F9),
+                        contentColor = if (isDark) Color.Black else Color(0xFF1E293B)
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1800,7 +1838,7 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
-                        tint = Color(0xFF1E293B)
+                        tint = if (isDark) Color.Black else Color(0xFF1E293B)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
