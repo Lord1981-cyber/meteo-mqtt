@@ -1,0 +1,6 @@
+{
+  "name": "Météo MQTT",
+  "description": "Station Météo IoT dashboard connecting to MQTT Broker (Maqiatto) to track live sensor feeds of Temperature, Humidity, Pressure, Altitude, and Radiation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
