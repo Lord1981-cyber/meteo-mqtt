@@ -5,11 +5,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.example.ui.MeteoViewModel
 import com.example.ui.screens.DashboardScreen
+import com.example.ui.screens.MeteoSplashScreen
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,10 +30,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
+                var showSplash by remember { mutableStateOf(true) }
+
                 Surface(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    DashboardScreen(viewModel = viewModel)
+                    Crossfade(
+                        targetState = showSplash,
+                        label = "AppStartTransition"
+                    ) { isSplash ->
+                        if (isSplash) {
+                            MeteoSplashScreen(
+                                onFinished = { showSplash = false }
+                            )
+                        } else {
+                            DashboardScreen(viewModel = viewModel)
+                        }
+                    }
                 }
             }
         }

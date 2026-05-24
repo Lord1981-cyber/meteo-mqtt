@@ -17,11 +17,15 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -392,6 +396,11 @@ fun LiveFeedTab(viewModel: MeteoViewModel) {
             // Premium custom styled LDR Sunshine Card - Spans full width
             item {
                 SolarRadiationCard(reading)
+            }
+
+            // Interactive 3-Day Short-Term Nowcast Weather Prognostics Panel
+            item {
+                MeteoNowcastPanel(reading)
             }
 
             // Displays the raw CSV string parsed via broker
@@ -980,6 +989,11 @@ fun HistoryTab(viewModel: MeteoViewModel) {
                 }
             }
 
+            // Beautiful interactive parameter trend tracking histogram
+            item {
+                HistoryHistogramCard(readings)
+            }
+
             item {
                 Text(
                     text = "Journal de bord (${readings.size} trames enregistrées)",
@@ -1357,3 +1371,543 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
         }
     }
 }
+
+// =========================================================================
+// NOWCAST WEATHER PREDICTION (3-DAY TREND MODEL)
+// =========================================================================
+
+@Composable
+fun MeteoNowcastPanel(reading: MeteoReading) {
+    val pressureVal = reading.pressure
+    val humidityVal = reading.humidity
+    
+    // Day 1, 2, 3 values calculated with deterministic offset variations based on barometric trends
+    // Trend condition code based on standard sea level pressure 1013 hPa
+    val conditionType = when {
+        pressureVal > 1014f -> 0 // Sunny / High confidence
+        pressureVal < 1009f -> 2 // Low pressure instability / Rainy
+        else -> 1 // Variable cloudy preset
+    }
+    
+    val baseTemp = reading.temperature
+    val sdf = java.text.SimpleDateFormat("EEEE", java.util.Locale.FRANCE)
+    
+    val forecasts = remember(reading.timestamp, baseTemp, pressureVal, humidityVal) {
+        List(3) { index ->
+            val dayOffset = index + 1
+            val futureTime = reading.timestamp + dayOffset * 24 * 60 * 60 * 1000L
+            val dayName = sdf.format(java.util.Date(futureTime)).replaceFirstChar { it.uppercase() }
+            
+            // Deterministic changes
+            val maxModifier = when (index) {
+                0 -> if (conditionType == 0) 1.5f else if (conditionType == 2) -2.0f else -0.5f
+                1 -> if (conditionType == 0) 2.2f else if (conditionType == 2) -1.2f else 0.4f
+                else -> if (conditionType == 0) 1.8f else if (conditionType == 2) -3.1f else -1.1f
+            }
+            
+            val minModifier = when (index) {
+                0 -> -6.5f
+                1 -> -5.8f
+                else -> -7.2f
+            }
+            
+            val predictedMax = baseTemp + maxModifier
+            val predictedMin = baseTemp + minModifier
+            
+            // Condition text, Icon resources, Colors matching the visual rules
+            val (statusText, statusIcon, iconColor, statusColor) = when (conditionType) {
+                0 -> { // Fair/Dry/High Pressure
+                    if (humidityVal > 58f && index == 2) {
+                        Quadruple("Averse d'été", Icons.Default.WaterDrop, Color(0xFF3B82F6), Color(0xFF2563EB))
+                    } else {
+                        Quadruple("Ensoleillé", Icons.Default.WbSunny, Color(0xFFF59E0B), Color(0xFFD97706))
+                    }
+                }
+                2 -> { // Wet/Depression
+                    if (index == 1) {
+                        Quadruple("Orages Bosse", Icons.Default.Thunderstorm, Color(0xFF9333EA), Color(0xFF7E22CE))
+                    } else {
+                        Quadruple("Pluie Continue", Icons.Default.Umbrella, Color(0xFF2563EB), Color(0xFF1D4ED8))
+                    }
+                }
+                else -> { // Standard local variable mix
+                    if (index == 0) {
+                        Quadruple("Passages Nuageux", Icons.Default.Cloud, Color(0xFF64748B), Color(0xFF475569))
+                    } else if (index == 1) {
+                        Quadruple("Belles Éclaircies", Icons.Default.WbSunny, Color(0xFFF59E0B), Color(0xFFD97706))
+                    } else {
+                        Quadruple("Ciel Voilé", Icons.Default.FilterHdr, Color(0xFF64748B), Color(0xFF475569))
+                    }
+                }
+            }
+            
+            val confidence = when(conditionType) {
+                0 -> 92 - (index * 4)
+                2 -> 73 - (index * 6)
+                else -> 82 - (index * 5)
+            }
+            
+            NowcastItem(dayName, predictedMin, predictedMax, statusText, statusIcon, iconColor, confidence, statusColor)
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("nowcast_forecast_card"),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            // Header Content layout
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFEFF6FF)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = Color(0xFF2563EB),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        text = "Prévisions Nowcast (3 Jours)",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = Color(0xFF0F172A)
+                    )
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(Color(0xFFECFDF5))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "MODÈLE DYNAMIQUE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.5.sp
+                        ),
+                        color = Color(0xFF059669)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Render the 3 days forecast column items in beautiful layout cards
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                forecasts.forEachIndexed { idx, item ->
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFFF8FAFC))
+                            .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(20.dp))
+                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = if (idx == 0) "Demain" else item.dayName,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = Color(0xFF475569)
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(100.dp))
+                                .background(item.iconColor.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = item.statusIcon,
+                                contentDescription = null,
+                                tint = item.iconColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "${String.format("%.1f", item.tempMax)}°",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = Color(0xFF1E293B)
+                            )
+                            Text(
+                                text = "Min: ${String.format("%.0f", item.tempMin)}°",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF94A3B8)
+                            )
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(100.dp))
+                                .background(Color.White)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .border(1.dp, Color(0xFFEFF3F8), RoundedCornerShape(100.dp))
+                        ) {
+                            Text(
+                                text = item.statusText,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = item.statusColor,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        
+                        Text(
+                            text = "Conf: ${item.confidence}%",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// =========================================================================
+// INTERACTIVE HISTORICAL PARAMETERS CHART (HISTOGRAM)
+// =========================================================================
+
+@Composable
+fun HistoryHistogramCard(readings: List<MeteoReading>) {
+    var selectedMetric by remember { mutableStateOf(0) } // 0: Temp, 1: Hum, 2: Radiation
+    
+    // Slices only the last twelve chronological readings to prevent card cluttering
+    val recentReadings = remember(readings) {
+        readings.takeLast(12)
+    }
+    
+    val metricsDetails = listOf(
+        Triple("Température", "°C", Color(0xFFEA580C)),
+        Triple("Humidité", "%", Color(0xFF2563EB)),
+        Triple("Soleil (LDR)", "Lux", Color(0xFFD97706))
+    )
+    
+    val activeDetails = metricsDetails[selectedMetric]
+    val activeLabel = activeDetails.first
+    val activeUnit = activeDetails.second
+    val activeColor = activeDetails.third
+    
+    val values = recentReadings.map { r ->
+        when (selectedMetric) {
+            0 -> r.temperature
+            1 -> r.humidity
+            else -> r.radiation
+        }
+    }
+    
+    val maxVal = values.maxOrNull() ?: 10f
+    val minVal = values.minOrNull() ?: 0f
+    val avgVal = if (values.isEmpty()) 0f else values.average().toFloat()
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("history_histogram_card"),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Histogramme de Tendance",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = "Dernières ${recentReadings.size} trames temporelles",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+                
+                Icon(
+                    imageVector = Icons.Default.BarChart,
+                    contentDescription = null,
+                    tint = activeColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Choice Selector segment controls with dynamic highlights
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF8FAFC))
+                    .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(12.dp))
+                    .padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                metricsDetails.forEachIndexed { idx, item ->
+                    val isSelected = selectedMetric == idx
+                    val chipBg = if (isSelected) activeColor else Color.Transparent
+                    val chipTextColor = if (isSelected) Color.White else Color(0xFF64748B)
+                    
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(chipBg)
+                            .clickable { selectedMetric = idx }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = item.first.split(" ").first(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            ),
+                            color = chipTextColor
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            if (recentReadings.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Données d'enregistrement insuffisantes",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF64748B)
+                    )
+                }
+            } else {
+                val valueRange = (maxVal - minVal).coerceAtLeast(0.1f)
+                val gradient = Brush.verticalGradient(
+                    colors = listOf(activeColor, activeColor.copy(alpha = 0.35f))
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 6.dp)
+                    ) {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+                        
+                        val numBars = recentReadings.size
+                        
+                        // Vertical padding bounds
+                        val topPadding = 18.dp.toPx()
+                        val bottomPadding = 10.dp.toPx()
+                        val chartHeight = canvasHeight - topPadding - bottomPadding
+                        
+                        val barSpacing = 6.dp.toPx()
+                        val totalSpacing = barSpacing * (numBars - 1).coerceAtLeast(0)
+                        val barWidth = ((canvasWidth - totalSpacing) / numBars).coerceAtLeast(3.dp.toPx())
+                        
+                        // Draw average guide dashed line
+                        val ratioAvg = ((avgVal - minVal) / valueRange).coerceIn(0f, 1f)
+                        val avgY = canvasHeight - bottomPadding - (ratioAvg * chartHeight)
+                        drawLine(
+                            color = Color(0xFFCBD5E1),
+                            start = Offset(0f, avgY),
+                            end = Offset(canvasWidth, avgY),
+                            strokeWidth = 1f.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        )
+                        
+                        // Draw columns
+                        recentReadings.forEachIndexed { i, reading ->
+                            val value = when (selectedMetric) {
+                                0 -> reading.temperature
+                                1 -> reading.humidity
+                                else -> reading.radiation
+                            }
+                            
+                            val ratio = ((value - minVal) / valueRange).coerceIn(0f, 1f)
+                            val barHeight = (ratio * chartHeight).coerceAtLeast(4.dp.toPx())
+                            
+                            val startX = i * (barWidth + barSpacing)
+                            val startY = canvasHeight - bottomPadding - barHeight
+                            
+                            drawRoundRect(
+                                brush = gradient,
+                                topLeft = Offset(startX, startY),
+                                size = Size(barWidth, barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                // Aligning numerical text indicators right below each column
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    recentReadings.forEachIndexed { i, reading ->
+                        val value = when (selectedMetric) {
+                            0 -> reading.temperature
+                            1 -> reading.humidity
+                            else -> reading.radiation
+                        }
+                        
+                        val timeStr = if (recentReadings.size <= 7) {
+                            try {
+                                val sdfTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.FRANCE)
+                                sdfTime.format(java.util.Date(reading.timestamp))
+                            } catch (e: Exception) {
+                                "#${reading.id}"
+                            }
+                        } else {
+                            "#${reading.id}"
+                        }
+                        
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = if (selectedMetric == 2) {
+                                    String.format("%.0f", value)
+                                } else {
+                                    String.format("%.0f", value) + "°"
+                                },
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                maxLines = 1,
+                                color = Color(0xFF1E293B)
+                            )
+                            Spacer(modifier = Modifier.height(1.dp))
+                            Text(
+                                text = timeStr,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                maxLines = 1,
+                                color = Color(0xFF94A3B8)
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(14.dp))
+                
+                // Bottom summary row indicating statistical calculations
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFF8FAFC))
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val formattedAvg = if (selectedMetric == 2) String.format("%.0f", avgVal) else String.format("%.1f", avgVal)
+                    val formattedMax = if (selectedMetric == 2) String.format("%.0f", maxVal) else String.format("%.1f", maxVal)
+                    val formattedMin = if (selectedMetric == 2) String.format("%.0f", minVal) else String.format("%.1f", minVal)
+                    
+                    Text(
+                        text = "Moyenne: $formattedAvg $activeUnit",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        ),
+                        color = Color(0xFF475569)
+                    )
+                    
+                    Text(
+                        text = "Min: $formattedMin $activeUnit  |  Max: $formattedMax $activeUnit",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF64748B)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Simple Helper structures for cleaner data mapping
+data class NowcastItem(
+    val dayName: String,
+    val tempMin: Float,
+    val tempMax: Float,
+    val statusText: String,
+    val statusIcon: ImageVector,
+    val iconColor: Color,
+    val confidence: Int,
+    val statusColor: Color
+)
+
+data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)
