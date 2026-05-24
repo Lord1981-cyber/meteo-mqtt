@@ -6,9 +6,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -754,14 +758,152 @@ fun MeteoHeroCard(reading: MeteoReading) {
                     horizontalAlignment = Alignment.End,
                     modifier = Modifier.padding(start = 16.dp)
                 ) {
-                    Icon(
-                        imageVector = if (reading.radiation > 300f) Icons.Default.WbSunny else Icons.Default.WbCloudy,
-                        contentDescription = null,
-                        tint = if (reading.radiation > 300f) Color(0xFFFFD54F) else Color.White,
-                        modifier = Modifier.size(52.dp)
-                    )
+                    WeatherAnimationContainer(reading = reading)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun WeatherAnimationContainer(reading: MeteoReading) {
+    val isSunny = reading.radiation > 300f || reading.pressure > 1014f
+    val isRainy = reading.pressure < 1009f || reading.humidity > 80f
+
+    val infiniteTransition = rememberInfiniteTransition(label = "weather_animations")
+
+    if (isSunny) {
+        val rotation by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(14000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "sun_rotation"
+        )
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 0.92f,
+            targetValue = 1.08f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1800, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "sun_pulse"
+        )
+        Box(
+            modifier = Modifier.size(56.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.WbSunny,
+                contentDescription = "Soleil Animé",
+                tint = Color(0xFFFFD54F),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        rotationZ = rotation,
+                        scaleX = scale,
+                        scaleY = scale
+                    )
+            )
+        }
+    } else if (isRainy) {
+        val rainY1 by infiniteTransition.animateFloat(
+            initialValue = -8f,
+            targetValue = 38f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(900, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "rain_1"
+        )
+        val rainY2 by infiniteTransition.animateFloat(
+            initialValue = -12f,
+            targetValue = 35f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "rain_2"
+        )
+        val rainY3 by infiniteTransition.animateFloat(
+            initialValue = -4f,
+            targetValue = 42f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(750, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "rain_3"
+        )
+
+        Box(
+            modifier = Modifier.size(56.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val lineColor = Color(0xFF93C5FD).copy(alpha = 0.7f)
+                val strokeW = 4f
+                
+                drawLine(
+                    color = lineColor,
+                    start = Offset(x = size.width * 0.25f, y = rainY1),
+                    end = Offset(x = size.width * 0.25f, y = rainY1 + 10f),
+                    strokeWidth = strokeW
+                )
+                drawLine(
+                    color = lineColor,
+                    start = Offset(x = size.width * 0.5f, y = rainY2),
+                    end = Offset(x = size.width * 0.5f, y = rainY2 + 12f),
+                    strokeWidth = strokeW
+                )
+                drawLine(
+                    color = lineColor,
+                    start = Offset(x = size.width * 0.75f, y = rainY3),
+                    end = Offset(x = size.width * 0.75f, y = rainY3 + 8f),
+                    strokeWidth = strokeW
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.Umbrella,
+                contentDescription = "Pluie Animée",
+                tint = Color(0xFF60A5FA),
+                modifier = Modifier
+                    .size(40.dp)
+                    .align(Alignment.Center)
+            )
+        }
+    } else {
+        val floatOffset by infiniteTransition.animateFloat(
+            initialValue = -6f,
+            targetValue = 6f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2500, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "cloud_float"
+        )
+
+        Box(
+            modifier = Modifier.size(56.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Cloud,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.45f),
+                modifier = Modifier
+                    .size(32.dp)
+                    .offset(x = (-8).dp + floatOffset.dp, y = (-5).dp)
+            )
+            Icon(
+                imageVector = Icons.Default.Cloud,
+                contentDescription = "Nuage Animé",
+                tint = Color.White,
+                modifier = Modifier
+                    .size(42.dp)
+                    .offset(x = floatOffset.dp, y = 3.dp)
+            )
         }
     }
 }
@@ -1680,7 +1822,7 @@ fun MeteoNowcastPanel(reading: MeteoReading) {
     val pressureVal = reading.pressure
     val humidityVal = reading.humidity
     
-    // Day 1, 2, 3 values calculated with deterministic offset variations based on barometric trends
+    // Day 1, 2, 3, 4, 5 values calculated with deterministic offset variations based on barometric trends
     // Trend condition code based on standard sea level pressure 1013 hPa
     val conditionType = when {
         pressureVal > 1014f -> 0 // Sunny / High confidence
@@ -1692,7 +1834,7 @@ fun MeteoNowcastPanel(reading: MeteoReading) {
     val sdf = java.text.SimpleDateFormat("EEEE", java.util.Locale.FRANCE)
     
     val forecasts = remember(reading.timestamp, baseTemp, pressureVal, humidityVal) {
-        List(3) { index ->
+        List(5) { index ->
             val dayOffset = index + 1
             val futureTime = reading.timestamp + dayOffset * 24 * 60 * 60 * 1000L
             val dayName = sdf.format(java.util.Date(futureTime)).replaceFirstChar { it.uppercase() }
@@ -1701,13 +1843,17 @@ fun MeteoNowcastPanel(reading: MeteoReading) {
             val maxModifier = when (index) {
                 0 -> if (conditionType == 0) 1.5f else if (conditionType == 2) -2.0f else -0.5f
                 1 -> if (conditionType == 0) 2.2f else if (conditionType == 2) -1.2f else 0.4f
-                else -> if (conditionType == 0) 1.8f else if (conditionType == 2) -3.1f else -1.1f
+                2 -> if (conditionType == 0) 1.8f else if (conditionType == 2) -3.1f else -1.1f
+                3 -> if (conditionType == 0) 2.5f else if (conditionType == 2) -2.5f else 0.8f
+                else -> if (conditionType == 0) 3.0f else if (conditionType == 2) -1.8f else 1.2f
             }
             
             val minModifier = when (index) {
                 0 -> -6.5f
                 1 -> -5.8f
-                else -> -7.2f
+                2 -> -7.2f
+                3 -> -5.2f
+                else -> -6.0f
             }
             
             val predictedMax = baseTemp + maxModifier
@@ -1716,26 +1862,26 @@ fun MeteoNowcastPanel(reading: MeteoReading) {
             // Condition text, Icon resources, Colors matching the visual rules
             val (statusText, statusIcon, iconColor, statusColor) = when (conditionType) {
                 0 -> { // Fair/Dry/High Pressure
-                    if (humidityVal > 58f && index == 2) {
+                    if (humidityVal > 58f && index >= 2) {
                         Quadruple("Averse d'été", Icons.Default.WaterDrop, Color(0xFF3B82F6), Color(0xFF2563EB))
                     } else {
                         Quadruple("Ensoleillé", Icons.Default.WbSunny, Color(0xFFF59E0B), Color(0xFFD97706))
                     }
                 }
                 2 -> { // Wet/Depression
-                    if (index == 1) {
+                    if (index % 2 == 1) {
                         Quadruple("Orages Bosse", Icons.Default.Thunderstorm, Color(0xFF9333EA), Color(0xFF7E22CE))
                     } else {
                         Quadruple("Pluie Continue", Icons.Default.Umbrella, Color(0xFF2563EB), Color(0xFF1D4ED8))
                     }
                 }
                 else -> { // Standard local variable mix
-                    if (index == 0) {
-                        Quadruple("Passages Nuageux", Icons.Default.Cloud, Color(0xFF64748B), Color(0xFF475569))
-                    } else if (index == 1) {
-                        Quadruple("Belles Éclaircies", Icons.Default.WbSunny, Color(0xFFF59E0B), Color(0xFFD97706))
-                    } else {
-                        Quadruple("Ciel Voilé", Icons.Default.FilterHdr, Color(0xFF64748B), Color(0xFF475569))
+                    when (index) {
+                        0 -> Quadruple("Passages Nuageux", Icons.Default.Cloud, Color(0xFF64748B), Color(0xFF475569))
+                        1 -> Quadruple("Belles Éclaircies", Icons.Default.WbSunny, Color(0xFFF59E0B), Color(0xFFD97706))
+                        2 -> Quadruple("Ciel Voilé", Icons.Default.FilterHdr, Color(0xFF64748B), Color(0xFF475569))
+                        3 -> Quadruple("Brouillard", Icons.Default.CloudQueue, Color(0xFF94A3B8), Color(0xFF64748B))
+                        else -> Quadruple("Vent Modéré", Icons.Default.Compress, Color(0xFF0EA5E9), Color(0xFF0369A1))
                     }
                 }
             }
@@ -1785,7 +1931,7 @@ fun MeteoNowcastPanel(reading: MeteoReading) {
                         )
                     }
                     Text(
-                        text = "Prévisions Nowcast (3 Jours)",
+                        text = "Prévisions Baromètre (5 Jours)",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp
@@ -1801,7 +1947,7 @@ fun MeteoNowcastPanel(reading: MeteoReading) {
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "MODÈLE DYNAMIQUE",
+                        text = "STATISTIQUES MQTT",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 8.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -1814,19 +1960,21 @@ fun MeteoNowcastPanel(reading: MeteoReading) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Render the 3 days forecast column items in beautiful layout cards
+            val scrollState = rememberScrollState()
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 forecasts.forEachIndexed { idx, item ->
                     Column(
                         modifier = Modifier
-                            .weight(1f)
+                            .width(115.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color(0xFFF8FAFC))
                             .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(20.dp))
-                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                            .padding(vertical = 12.dp, horizontal = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
