@@ -13,14 +13,19 @@ import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +92,7 @@ fun MeteoSplashScreen(onFinished: () -> Unit) {
                 .fillMaxWidth()
                 .padding(28.dp)
                 .scale(scale.value)
+                .alpha(alpha.value)
                 .align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -121,6 +127,7 @@ fun MeteoSplashScreen(onFinished: () -> Unit) {
                         modifier = Modifier
                             .size(54.dp)
                             .scale(if (startAnimate) 1.0f else 0.5f)
+                            .rotate(sunRotation)
                     )
                 }
 
@@ -253,6 +260,36 @@ fun MeteoSplashScreen(onFinished: () -> Unit) {
                 ),
                 color = Color(0xFF64748B)
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { onFinished() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF3B82F6),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .testTag("splash_lancer_button")
+                    .height(44.dp)
+            ) {
+                Text(
+                    text = "Lancer",
+                    style = androidx.compose.ui.text.TextStyle(
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Default.Speed,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }

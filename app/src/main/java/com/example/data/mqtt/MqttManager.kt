@@ -26,8 +26,8 @@ enum class MqttConnectionState {
 }
 
 class MqttManager(
-    private val context: Context,
-    private val repository: MeteoRepository
+    val context: Context,
+    val repository: MeteoRepository
 ) {
     private val tag = "MqttManager"
     private var mqttClient: MqttClient? = null
@@ -206,6 +206,7 @@ class MqttManager(
                     repository.insert(reading)
                     _receivedMessageCount.value += 1
                     Log.d(tag, "Successfully saved sensor reading into database: $reading")
+                    checkAndFireNotifications(temp, humidity, pressure)
                 } else {
                     Log.w(tag, "Received poorly formatted payload (fewer than 3 parameters): $payload")
                     // Still insert a fallback if possible to let users observe the raw data
@@ -220,10 +221,41 @@ class MqttManager(
                     )
                     repository.insert(reading)
                     _receivedMessageCount.value += 1
+                    checkAndFireNotifications(rawNum, 0.0f, 0.0f)
                 }
             } catch (e: Exception) {
                 Log.e(tag, "Exception parsing MQTT payload", e)
             }
+        }
+    }
+
+    private fun checkAndFireNotifications(temp: Float, humidity: Float, pressure: Float) {
+        try {
+            val prefs = context.getSharedPreferences("meteo_settings", Context.MODE_PRIVATE)
+            val bgNotifEnabled = prefs.getBoolean("bg_notifications_enabled", true)
+            val bulletinEmailEnabled = prefs.getBoolean("bulletin_email_enabled", false)
+            val emailAddress = prefs.getString("bulletin_email_address", "") ?: ""
+            val duration = prefs.getString("bulletin_duration", "Toutes les 2 heures") ?: "Toutes les 2 heures"
+
+            if (bgNotifEnabled) {
+                com.example.ui.NotificationHelper.showNotification(
+                    context,
+                    "Station Météo: Nouvelle mesure 🌡️",
+                    "Temp: $temp°C | Hum: $humidity% | Pression: $pressure hPa",
+                    notificationId = 1001
+                )
+            }
+
+            if (bulletinEmailEnabled && emailAddress.isNotBlank()) {
+                com.example.ui.NotificationHelper.showNotification(
+                    context,
+                    "📧 Bulletin Météo Envoyé",
+                    "Rapport envoyé avec succès à $emailAddress ($duration)",
+                    notificationId = 1002
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Error triggering notifications in MqttManager", e)
         }
     }
 

@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -1324,7 +1326,304 @@ fun ConfigurationTab(viewModel: MeteoViewModel) {
         }
 
         item {
-            Divider(color = Color(0xFFF1F5F9))
+            val bgNotifEnabled by viewModel.backgroundNotificationsEnabled.collectAsStateWithLifecycle()
+            val bulletinEnabled by viewModel.bulletinEmailEnabled.collectAsStateWithLifecycle()
+            val emailAddress by viewModel.bulletinEmailAddress.collectAsStateWithLifecycle()
+            val selectedDuration by viewModel.bulletinDuration.collectAsStateWithLifecycle()
+
+            var showDurationDropdown by remember { mutableStateOf(false) }
+            val durationsList = listOf("Chaque minute (Test)", "Toutes les 2 heures", "Toutes les 6 heures", "Toutes les 12 heures", "Toutes les 24 heures")
+
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("notifications_bulletin_card")
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        text = "Alertes & Services de Bulletin",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color(0xFF0F172A)
+                    )
+
+                    // Background Notifications Option
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.setBackgroundNotifications(!bgNotifEnabled) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFEFF6FF)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    tint = Color(0xFF3B82F6),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Notifications en arrière-plan",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = Color(0xFF1E293B)
+                                )
+                                Text(
+                                    text = "Alerter lors de nouvelles réceptions de mesures",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF64748B)
+                                )
+                            }
+                        }
+                        Checkbox(
+                            checked = bgNotifEnabled,
+                            onCheckedChange = { viewModel.setBackgroundNotifications(it) },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Color(0xFF3B82F6),
+                                uncheckedColor = Color(0xFFCBD5E1)
+                            ),
+                            modifier = Modifier.testTag("bg_notifications_checkbox")
+                        )
+                    }
+
+                    HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                    // Bulletin Email Options
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.setBulletinEmailEnabled(!bulletinEnabled) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFECFDF5)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = Color(0xFF10B981),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Bulletin météo par email",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = Color(0xFF1E293B)
+                                )
+                                Text(
+                                    text = "Envoyer un rapport périodique structuré",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF64748B)
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = bulletinEnabled,
+                            onCheckedChange = { viewModel.setBulletinEmailEnabled(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF10B981),
+                                uncheckedThumbColor = Color(0xFF94A3B8),
+                                uncheckedTrackColor = Color(0xFFE2E8F0)
+                            ),
+                            modifier = Modifier.testTag("email_bulletin_switch")
+                        )
+                    }
+
+                    // Expandable Input Form Content
+                    AnimatedVisibility(
+                        visible = bulletinEnabled,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFF8FAFC), RoundedCornerShape(16.dp))
+                                .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(16.dp))
+                                .padding(14.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = emailAddress,
+                                onValueChange = { viewModel.setBulletinEmailAddress(it) },
+                                label = { Text("Adresse email inscrite") },
+                                placeholder = { Text("exemple@domaine.com") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF10B981),
+                                    unfocusedBorderColor = Color(0xFFE2E8F0)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("bulletin_email_input"),
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Email,
+                                        contentDescription = null,
+                                        tint = Color(0xFF64748B)
+                                    )
+                                }
+                            )
+
+                            // Duration selection drop-down selector
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedTextField(
+                                    value = selectedDuration,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Fréquence d'envoi") },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color(0xFF10B981),
+                                        unfocusedBorderColor = Color(0xFFE2E8F0)
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { showDurationDropdown = true }
+                                        .testTag("bulletin_duration_picker"),
+                                    trailingIcon = {
+                                        IconButton(onClick = { showDurationDropdown = true }) {
+                                            Icon(
+                                                imageVector = Icons.Default.ArrowDropDown,
+                                                contentDescription = "Ouvrir les durées"
+                                            )
+                                        }
+                                    }
+                                )
+
+                                DropdownMenu(
+                                    expanded = showDurationDropdown,
+                                    onDismissRequest = { showDurationDropdown = false },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    durationsList.forEach { durationOption ->
+                                        DropdownMenuItem(
+                                            text = { Text(durationOption) },
+                                            onClick = {
+                                                viewModel.setBulletinDuration(durationOption)
+                                                showDurationDropdown = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            val themeMode by viewModel.appThemeMode.collectAsStateWithLifecycle()
+
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("theme_selection_card")
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        text = "Thème d'affichage",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color(0xFF0F172A)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        val options = listOf(
+                            Triple("Système", Icons.Default.Settings, "Système"),
+                            Triple("Clair", Icons.Default.WbSunny, "Clair"),
+                            Triple("Sombre", Icons.Default.NightsStay, "Sombre")
+                        )
+
+                        options.forEach { (label, icon, value) ->
+                            val isSelected = themeMode == value
+                            val borderCol = if (isSelected) Color(0xFF3B82F6) else Color(0xFFF1F5F9)
+                            val bgCol = if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC)
+                            val contentCol = if (isSelected) Color(0xFF2563EB) else Color(0xFF475569)
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(bgCol)
+                                    .border(2.dp, borderCol, RoundedCornerShape(16.dp))
+                                    .clickable { viewModel.setAppThemeMode(value) }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = contentCol,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = contentCol
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            HorizontalDivider(color = Color(0xFFF1F5F9))
         }
 
         item {

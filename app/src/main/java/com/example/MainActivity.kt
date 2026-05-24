@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
@@ -29,7 +30,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val themeMode by viewModel.appThemeMode.collectAsState()
+            val isDark = when (themeMode) {
+                "Clair" -> false
+                "Sombre" -> true
+                else -> isSystemInDarkTheme()
+            }
+
+            MyApplicationTheme(darkTheme = isDark) {
                 var showSplash by remember { mutableStateOf(true) }
 
                 Surface(

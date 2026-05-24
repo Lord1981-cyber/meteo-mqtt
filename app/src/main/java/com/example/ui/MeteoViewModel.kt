@@ -46,6 +46,40 @@ class MeteoViewModel(
     val clientIdForm = MutableStateFlow(mqttManager.clientId)
     val topicForm = MutableStateFlow(mqttManager.topic)
 
+    private val prefs = mqttManager.context.getSharedPreferences("meteo_settings", android.content.Context.MODE_PRIVATE)
+
+    // Alert & Bulletin settings states
+    val backgroundNotificationsEnabled = MutableStateFlow(prefs.getBoolean("bg_notifications_enabled", true))
+    val bulletinEmailEnabled = MutableStateFlow(prefs.getBoolean("bulletin_email_enabled", false))
+    val bulletinEmailAddress = MutableStateFlow(prefs.getString("bulletin_email_address", "") ?: "")
+    val bulletinDuration = MutableStateFlow(prefs.getString("bulletin_duration", "Toutes les 2 heures") ?: "Toutes les 2 heures")
+    val appThemeMode = MutableStateFlow(prefs.getString("app_theme_mode", "Système") ?: "Système")
+
+    fun setAppThemeMode(mode: String) {
+        appThemeMode.value = mode
+        prefs.edit().putString("app_theme_mode", mode).apply()
+    }
+
+    fun setBackgroundNotifications(enabled: Boolean) {
+        backgroundNotificationsEnabled.value = enabled
+        prefs.edit().putBoolean("bg_notifications_enabled", enabled).apply()
+    }
+
+    fun setBulletinEmailEnabled(enabled: Boolean) {
+        bulletinEmailEnabled.value = enabled
+        prefs.edit().putBoolean("bulletin_email_enabled", enabled).apply()
+    }
+
+    fun setBulletinEmailAddress(email: String) {
+        bulletinEmailAddress.value = email
+        prefs.edit().putString("bulletin_email_address", email).apply()
+    }
+
+    fun setBulletinDuration(duration: String) {
+        bulletinDuration.value = duration
+        prefs.edit().putString("bulletin_duration", duration).apply()
+    }
+
     /**
      * Connect to broker with currently typed credentials.
      */
